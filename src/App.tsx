@@ -4,9 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Home from "./pages/Home";
 import Marketplace from "./pages/Marketplace";
 import MarketDetail from "./pages/MarketDetail";
 import Portfolio from "./pages/Portfolio";
+import Leaderboard from "./pages/Leaderboard";
 import Liquidity from "./pages/Liquidity";
 import NotFound from "./pages/NotFound";
 
@@ -18,18 +21,21 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background flex flex-col">
           <Header />
-          <main>
+          <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Marketplace />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/markets" element={<Marketplace />} />
               <Route path="/market/:id" element={<MarketDetail />} />
               <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/liquidity" element={<Liquidity />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </BrowserRouter>
     </TooltipProvider>

@@ -39,6 +39,18 @@ const Header = () => {
                 }`
               }
             >
+              Home
+            </NavLink>
+            <NavLink
+              to="/markets"
+              className={({ isActive }) =>
+                `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                }`
+              }
+            >
               Markets
             </NavLink>
             <NavLink
@@ -52,6 +64,18 @@ const Header = () => {
               }
             >
               Portfolio
+            </NavLink>
+            <NavLink
+              to="/leaderboard"
+              className={({ isActive }) =>
+                `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                }`
+              }
+            >
+              Leaderboard
             </NavLink>
             <NavLink
               to="/liquidity"

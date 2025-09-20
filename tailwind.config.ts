@@ -67,6 +67,7 @@ export default {
         'gradient-secondary': 'var(--gradient-secondary)',
         'gradient-success': 'var(--gradient-success)',
         'gradient-danger': 'var(--gradient-danger)',
+        'gradient-accent': 'var(--gradient-accent)',
       },
       boxShadow: {
         'card': 'var(--shadow-card)',
