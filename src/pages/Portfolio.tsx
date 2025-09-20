@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   TrendingUp, 
   TrendingDown, 
   DollarSign, 
   Trophy,
   Clock,
-  CheckCircle
+  CheckCircle,
+  User
 } from "lucide-react";
 
 const Portfolio = () => {
@@ -102,9 +104,19 @@ const Portfolio = () => {
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">Portfolio Dashboard</h1>
-        <p className="text-muted-foreground">Track your predictions and performance</p>
+      <div className="text-center space-y-4">
+        <div className="flex flex-col items-center space-y-3">
+          <Avatar className="w-20 h-20 border-4 border-primary/20">
+            <AvatarImage src="/placeholder-avatar.jpg" alt="User Avatar" />
+            <AvatarFallback className="text-xl font-semibold bg-gradient-primary text-primary-foreground">
+              <User className="w-8 h-8" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-3xl font-bold">Portfolio Dashboard</h1>
+            <p className="text-muted-foreground">Track your predictions and performance</p>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
