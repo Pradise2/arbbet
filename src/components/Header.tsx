@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, TrendingUp, User } from "lucide-react";
@@ -13,9 +13,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const connectorIcons: Record<string, string> = {
+  "injected": "/icons/metamask.svg",
+  "io.metamask": "/icons/metamask.svg",
+  "com.coinbase.wallet": "/icons/coinbase.svg", 
+  "io.rabby": "/icons/rabby.svg",
+  "walletConnect": "/icons/walletconnect.svg",
+  "MetaMask": "/icons/metamask.svg",
+  "Coinbase Wallet": "/icons/coinbase.svg",
+  "Rabby Wallet": "/icons/rabby.svg",
+};
+
 const Header = () => {
   const { address, isConnected, chain } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect, connectors, status } = useConnect();
   const { disconnect } = useDisconnect();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -23,6 +34,28 @@ const Header = () => {
     if (!addr) return "";
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
+
+  // Filter connectors - show specific wallet connectors and WalletConnect
+  const availableConnectors = connectors.filter((connector) => {
+    // Always show WalletConnect
+    if (connector.type === 'walletConnect') return true;
+    
+    // Show specific wallet connectors (detected via EIP-6963)
+    if (connector.id !== 'injected') return true;
+    
+    // Show generic injected only if we have window.ethereum and no specific wallets
+    const hasSpecificWallets = connectors.some(c => c.id !== 'injected' && c.id !== 'walletConnect');
+    return !hasSpecificWallets && (typeof window !== 'undefined' && window.ethereum);
+  });
+
+  // Remove duplicates by name to avoid showing "MetaMask" multiple times
+  const uniqueConnectors = availableConnectors.reduce((acc, connector) => {
+    const existing = acc.find(c => c.name === connector.name);
+    if (!existing) {
+      acc.push(connector);
+    }
+    return acc;
+  }, [] as typeof availableConnectors);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -48,12 +81,28 @@ const Header = () => {
         
         {/* Wallet Connect Section */}
         <div className="flex items-center space-x-4">
-          {isConnected && chain && (<Badge variant="outline" className="hidden sm:flex">{chain.name}</Badge>)}
+          {isConnected && chain && (
+            <Badge variant="outline" className="hidden sm:flex">
+              {chain.name}
+            </Badge>
+          )}
           
           {isConnected ? (
             <div className="flex items-center space-x-3">
-              <div className="text-right hidden sm:block"><p className="text-xs text-muted-foreground">{truncateAddress(address!)}</p></div>
-              <Button variant="outline" size="sm" onClick={() => disconnect()} className="flex items-center space-x-2"><User className="h-4 w-4" /><span className="hidden sm:inline">Disconnect</span></Button>
+              <div className="text-right hidden sm:block">
+                <p className="text-xs text-muted-foreground">
+                  {truncateAddress(address!)}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnect()}
+                className="flex items-center space-x-2"
+              >
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Disconnect</span>
+              </Button>
             </div>
           ) : (
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -71,22 +120,56 @@ const Header = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  {connectors.map((connector) => (
-                    <Button
-                      key={connector.id}
-                      onClick={() => {
-                        connect({ connector });
-                        setIsModalOpen(false);
-                      }}
-                      disabled={!connector.ready}
-                      variant="outline"
-                      className="w-full justify-start text-base p-6"
-                    >
-                      <img src={connector.icon} alt={connector.name} className="w-6 h-6 mr-4" />
-                      {connector.name}
-                      {!connector.ready && ' (Not Detected)'}
-                    </Button>
-                  ))}
+                  {uniqueConnectors.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="mb-2">No wallets detected</p>
+                      <p className="text-sm">
+                        Please install MetaMask, Rabby, or Coinbase Wallet extension
+                      </p>
+                      <p className="text-xs mt-2">
+                        Or use WalletConnect to scan QR code
+                      </p>
+                    </div>
+                  ) : (
+                    uniqueConnectors.map((connector) => {
+                      const getConnectorIcon = () => {
+                        if (connectorIcons[connector.id]) return connectorIcons[connector.id];
+                        if (connectorIcons[connector.name]) return connectorIcons[connector.name];
+                        if (connectorIcons[connector.type]) return connectorIcons[connector.type];
+                        return "/icons/default.svg";
+                      };
+
+                      return (
+                        <Button
+                          key={connector.id}
+                          onClick={() => {
+                            connect({ connector });
+                            setIsModalOpen(false);
+                          }}
+                          variant="outline"
+                          className="w-full justify-start text-base p-6 hover:bg-accent"
+                          disabled={status === 'pending'}
+                        >
+                          <img
+                            src={getConnectorIcon()}
+                            alt={connector.name}
+                            className="w-6 h-6 mr-4"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/icons/default.svg";
+                            }}
+                          />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{connector.name}</span>
+                            {connector.type === 'walletConnect' && (
+                              <span className="text-xs text-muted-foreground">
+                                Scan with mobile wallet
+                              </span>
+                            )}
+                          </div>
+                        </Button>
+                      );
+                    })
+                  )}
                 </div>
               </DialogContent>
             </Dialog>

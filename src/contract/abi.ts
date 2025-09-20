@@ -1,4 +1,4 @@
-export const CONTRACT_ABi=[
+export const policastAbi =[
   {
     "abi": [
       {
@@ -2994,6 +2994,9 @@ export const CONTRACT_ABi=[
       }
     ]
   }
-]
+] as const;
 
-export const CONTRACT_ADDRESS = "0x8c7a476FFdB5818f241cCE82E6f2806a53F0cC32";
+export const policastContract = {
+  address: '0x8c7a476FFdB5818f241cCE82E6f2806a53F0cC32',
+  abi: policastAbi,
+} as const;
