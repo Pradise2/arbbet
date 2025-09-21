@@ -53,7 +53,7 @@ const Marketplace = () => {
         </div>
         
         {/* --- UPDATED FILTER BADGES WITH DROPDOWN --- */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           {visibleCategories.map((category) => (
             <Badge key={category} variant={selectedCategory === category ? "default" : "secondary"} className="cursor-pointer" onClick={() => setSelectedCategory(category)}>
