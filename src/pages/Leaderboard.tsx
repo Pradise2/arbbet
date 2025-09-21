@@ -10,6 +10,7 @@ import {
   Crown,
   User
 } from "lucide-react";
+import { cn } from "@/lib/utils"; // Import the cn utility
 
 const Leaderboard = () => {
   // Mock leaderboard data
@@ -18,7 +19,9 @@ const Leaderboard = () => {
     { rank: 2, username: "CryptoOracle", avatar: null, totalPnL: 12890.30, winRate: 75.2, totalTrades: 198 },
     { rank: 3, username: "SportsBettor", avatar: null, totalPnL: 11245.60, winRate: 72.8, totalTrades: 312 },
     { rank: 4, username: "TechPredictor", avatar: null, totalPnL: 9876.40, winRate: 69.5, totalTrades: 156 },
-    { rank: 5, username: "MarketMaven", avatar: null, totalPnL: 8945.20, winRate: 68.2, totalTrades: 201 }
+    { rank: 5, username: "MarketMaven", avatar: null, totalPnL: 8945.20, winRate: 68.2, totalTrades: 201 },
+    // --- ADDED USER'S POSITION ---
+    { rank: 6, username: "You", avatar: null, totalPnL: 8500.50, winRate: 65.0, totalTrades: 150 },
   ];
 
   const getRankIcon = (rank: number) => {
@@ -58,8 +61,6 @@ const Leaderboard = () => {
         </TabsList>
 
         <TabsContent value="all-time" className="mt-8">
-          {/* --- PODIUM SECTION HAS BEEN REMOVED --- */}
-
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Top Traders</CardTitle>
@@ -69,13 +70,21 @@ const Leaderboard = () => {
                 {topTraders.map((trader) => (
                   <div 
                     key={trader.rank} 
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                    // --- UPDATED: Conditional styling for the user's row ---
+                    className={cn(
+                      "flex items-center justify-between p-3 border rounded-lg transition-colors",
+                      trader.username === 'You' 
+                        ? 'bg-primary/10 border-primary/50' 
+                        : 'hover:bg-accent/50'
+                    )}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center justify-center w-8">{getRankIcon(trader.rank)}</div>
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={trader.avatar || undefined} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                        <AvatarFallback className={cn(
+                          trader.username === 'You' ? 'bg-primary text-primary-foreground' : 'bg-gradient-primary text-primary-foreground'
+                        )}>
                           <User className="w-5 h-5" />
                         </AvatarFallback>
                       </Avatar>
