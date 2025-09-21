@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import {
 
 const Portfolio = () => {
   const [activeTab, setActiveTab] = useState("positions");
+  const navigate = useNavigate(); // 2. Initialize the navigate function
 
   // Mock portfolio data
   const portfolioStats = {
@@ -128,7 +130,6 @@ const Portfolio = () => {
             <p className="text-2xl font-bold">${portfolioStats.totalInvested.toLocaleString()}</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6 text-center">
             <Trophy className="h-8 w-8 mx-auto mb-2 text-success" />
@@ -136,7 +137,6 @@ const Portfolio = () => {
             <p className="text-2xl font-bold text-success">${portfolioStats.totalWinnings.toLocaleString()}</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6 text-center">
             {portfolioStats.realizedPnL >= 0 ? (
@@ -150,7 +150,6 @@ const Portfolio = () => {
             </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6 text-center">
             <Clock className="h-8 w-8 mx-auto mb-2 text-accent" />
@@ -158,7 +157,6 @@ const Portfolio = () => {
             <p className="text-2xl font-bold">{portfolioStats.activePositions}</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6 text-center">
             <CheckCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
@@ -221,7 +219,11 @@ const Portfolio = () => {
                           </Button>
                         )}
                         {position.status === "Active" && (
-                          <Button variant="outline">
+                          // 3. Add the onClick handler
+                          <Button 
+                            variant="outline"
+                            onClick={() => navigate(`/market/${position.id}`)}
+                          >
                             View Market
                           </Button>
                         )}
