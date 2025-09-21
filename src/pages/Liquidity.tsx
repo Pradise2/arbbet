@@ -82,7 +82,7 @@ const Liquidity = () => {
                           <div><p className="text-sm text-muted-foreground mb-1">Value</p><p className="font-semibold text-sm">${position.currentValue.toLocaleString()}</p></div>
                           <div><p className="text-sm text-muted-foreground mb-1">Rewards</p><p className="font-semibold text-sm text-success">${position.rewards.toFixed(2)}</p></div>
                           <div><p className="text-sm text-muted-foreground mb-1">APY</p><p className="font-semibold text-sm text-primary">{position.apy}%</p></div>
-                          <div className="self-center"><Button className="bg-gradient-success hover:opacity-90"><Gift className="mr-2 h-4 w-4" />Claim</Button></div>
+                          <div className="self-center"><Button className="bg-gradient-success hover:opacity-90">Claim</Button></div>
                         </div>
                       </div>
                     </CardContent>
