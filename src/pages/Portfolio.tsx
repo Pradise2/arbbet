@@ -85,13 +85,41 @@ const Portfolio = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
+      {/* --- CHANGES ARE IN THIS SECTION --- */}
       <div className="flex items-center space-x-4">
         {isLoading ? (
-          <><Skeleton className="w-16 h-16 rounded-full" /><div className="space-y-2"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-32" /></div></>
+          <>
+            <Skeleton className="w-12 h-12 rounded-full" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </>
         ) : farcasterUser ? (
-          <><Avatar className="w-16 h-16 border-2 border-primary/20"><AvatarImage src={farcasterUser.pfpUrl} alt={farcasterUser.displayName} /><AvatarFallback className="text-lg font-semibold bg-gradient-primary text-primary-foreground">{farcasterUser.displayName?.[0] || farcasterUser.username?.[0]}</AvatarFallback></Avatar><div><h1 className="text-2xl font-bold">{farcasterUser.displayName}'s Portfolio</h1><p className="text-muted-foreground">@{farcasterUser.username}</p></div></>
+          <>
+            <Avatar className="w-12 h-12 border-2 border-primary/20">
+              <AvatarImage src={farcasterUser.pfpUrl} alt={farcasterUser.displayName} />
+              <AvatarFallback className="text-base font-semibold bg-gradient-primary text-primary-foreground">
+                {farcasterUser.displayName?.[0] || farcasterUser.username?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-xl font-bold">{farcasterUser.displayName}'s Portfolio</h1>
+              <p className="text-sm text-muted-foreground">@{farcasterUser.username}</p>
+            </div>
+          </>
         ) : (
-          <><Avatar className="w-16 h-16 border-2 border-primary/20"><AvatarFallback className="text-lg font-semibold bg-gradient-primary text-primary-foreground"><User className="w-7 h-7" /></AvatarFallback></Avatar><div><h1 className="text-2xl font-bold">Portfolio Dashboard</h1><p className="text-muted-foreground">Could not load Farcaster profile.</p></div></>
+          <>
+            <Avatar className="w-12 h-12 border-2 border-primary/20">
+               <AvatarFallback className="text-base font-semibold bg-gradient-primary text-primary-foreground">
+                 <User className="w-6 h-6" />
+               </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-xl font-bold">Portfolio Dashboard</h1>
+              <p className="text-sm text-muted-foreground">Could not load Farcaster profile.</p>
+            </div>
+          </>
         )}
       </div>
 
@@ -104,8 +132,6 @@ const Portfolio = () => {
             </CardContent>
           </Card>
         ))}
-        {/* The 5th item will wrap to a new line and be centered, which can look odd. 
-            We add a hidden item to make the grid even if there are 5 items. */}
         {summaryStats.length % 2 !== 0 && <div className="hidden sm:block"></div>}
       </div>
 
