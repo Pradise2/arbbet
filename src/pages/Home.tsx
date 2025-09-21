@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from '@/hooks/use-mobile';
+import React from "react";
+import { Separator } from "@/components/ui/separator";
 import { 
   TrendingUp, 
   DollarSign, 
@@ -15,6 +18,7 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const stats = [
     { label: "Total Volume", value: "$2.4M", icon: DollarSign },
@@ -41,53 +45,115 @@ const Home = () => {
     }
   ];
 
+  // --- MOBILE VIEW ---
+  if (isMobile) {
+    return (
+      <div className="container mx-auto py-10 px-4 space-y-16">
+        {/* 1. Hero Section (Mobile) */}
+        <section className="text-center space-y-6">
+          <Badge className="bg-gradient-accent text-accent-foreground px-3 py-1">
+            🚀 The Future of Prediction Markets
+          </Badge>
+          
+          <h1 className="text-4xl font-bold leading-tight">
+            <span className="bg-gradient-primary bg-clip-text text-transparent">
+              Predict the Future,
+            </span>
+            <br />
+            <span className="text-foreground">Earn from Knowledge</span>
+          </h1>
+          
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Trade on the outcomes of real-world events. From politics to sports, crypto to entertainment - put your insights to work.
+          </p>
+
+          {/* --- CHANGE IS HERE --- */}
+          <div className="flex flex-row gap-4">
+            <Button 
+              size="lg" 
+              className="w-full bg-gradient-primary hover:opacity-90"
+              onClick={() => navigate('/markets')}
+            >
+              Trade
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/leaderboard')}
+            >
+              Leaders
+              <Trophy className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </section>
+
+        {/* 2. Features Section (Mobile) */}
+        <section className="text-center space-y-6">
+          <div className="max-w-sm mx-auto">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">
+                Why Choose <span className="bg-gradient-primary bg-clip-text text-transparent">Policast</span>?
+              </h2>
+              <p className="text-muted-foreground">
+                Built for traders, by traders. Experience the next generation of prediction markets.
+              </p>
+            </div>
+
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  {features.map((feature, index) => (
+                    <React.Fragment key={index}>
+                      <div className="flex items-start gap-4 text-left">
+                        <div className="flex-shrink-0 bg-gradient-primary p-3 rounded-full w-12 h-12 flex items-center justify-center">
+                          <feature.icon className="h-6 w-6 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold">{feature.title}</h3>
+                          <p className="text-muted-foreground">{feature.description}</p>
+                        </div>
+                      </div>
+                      {index < features.length - 1 && <Separator />}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // --- DESKTOP VIEW (Remains the same) ---
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-accent/5 py-20 lg:py-32">
         <div className="container mx-auto px-4">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <Badge className="bg-gradient-accent text-accent-foreground px-4 py-2">
               🚀 The Future of Prediction Markets
             </Badge>
-            
             <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">
-                Predict the Future,
-              </span>
-              <br />
-              <span className="text-foreground">Earn from Knowledge</span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Predict the Future,</span><br /><span className="text-foreground">Earn from Knowledge</span>
             </h1>
-            
             <p className="text-xl lg:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Trade on the outcomes of real-world events. From politics to sports, 
-              crypto to entertainment - put your insights to work.
+              Trade on the outcomes of real-world events. From politics to sports, crypto to entertainment - put your insights to work.
             </p>
-
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-6"
-                onClick={() => navigate('/markets')}
-              >
-                Start Trading
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-6" onClick={() => navigate('/markets')}>
+                Start Trading<ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="text-lg px-8 py-6"
-                onClick={() => navigate('/leaderboard')}
-              >
-                View Leaderboard
-                <Trophy className="ml-2 h-5 w-5" />
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6" onClick={() => navigate('/leaderboard')}>
+                View Leaderboard<Trophy className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -104,7 +170,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
@@ -115,7 +180,6 @@ const Home = () => {
               Built for traders, by traders. Experience the next generation of prediction markets.
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-2">
@@ -132,7 +196,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto space-y-8">
@@ -140,26 +203,14 @@ const Home = () => {
               Ready to Start <span className="bg-gradient-primary bg-clip-text text-transparent">Predicting</span>?
             </h2>
             <p className="text-xl text-muted-foreground">
-              Join thousands of traders who are already earning from their predictions. 
-              No fees on your first trade!
+              Join thousands of traders who are already earning from their predictions. No fees on your first trade!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-6"
-                onClick={() => navigate('/markets')}
-              >
-                Browse Markets
-                <TrendingUp className="ml-2 h-5 w-5" />
+              <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-6" onClick={() => navigate('/markets')}>
+                Browse Markets<TrendingUp className="ml-2 h-5 w-5" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="text-lg px-8 py-6 border-2"
-                onClick={() => navigate('/portfolio')}
-              >
-                View Portfolio
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2" onClick={() => navigate('/portfolio')}>
+                View Portfolio<ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
