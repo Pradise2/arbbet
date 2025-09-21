@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjMyMDI2NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDFGMkE1MkYwZjlDZDYwZGY4RDAwNTdjNGE1YTEwRUFlNjQyNjNCNDgifQ",
+    "payload": "eyJkb21haW4iOiJhcmJiZXQtZ2lsdC52ZXJjZWwuYXBwIn0",
+    "signature": "MHhjNjI0MWU1M2U0MzA3NjlkMTQ1ZDE5NjA0YjIyMWI5NGU4YTNkZDAyZWNlOWZlMTViZmM5OTU0MjU2ZmNkMWRjNmZiZmU1NDA4OTg4MGJlNzZmNjRiNGViZDQ0Mjg4NmE3ZTMyZmZlZTM1MjJlMTQyMmNiMjU3YmJlNzRjN2U3OTFi"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Arb-Bet",
+    "iconUrl": "https://arbbet-gilt.vercel.app/icon.png",
+    "homeUrl": "https://arbbet-gilt.vercel.app",
+    "imageUrl": "https://arbbet-gilt.vercel.app/image.png",
+    "buttonTitle": "Check this out",
+    "splashImageUrl": "https://arbbet-gilt.vercel.app/splash.png",
+    "splashBackgroundColor": "#eeccff",
+    "webhookUrl": "https://arbbet-gilt.vercel.app/api/webhook"
+  }
+}
