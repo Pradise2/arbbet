@@ -10,7 +10,7 @@ import {
   Crown,
   User
 } from "lucide-react";
-import { cn } from "@/lib/utils"; // Import the cn utility
+import { cn } from "@/lib/utils";
 
 const Leaderboard = () => {
   // Mock leaderboard data
@@ -20,7 +20,6 @@ const Leaderboard = () => {
     { rank: 3, username: "SportsBettor", avatar: null, totalPnL: 11245.60, winRate: 72.8, totalTrades: 312 },
     { rank: 4, username: "TechPredictor", avatar: null, totalPnL: 9876.40, winRate: 69.5, totalTrades: 156 },
     { rank: 5, username: "MarketMaven", avatar: null, totalPnL: 8945.20, winRate: 68.2, totalTrades: 201 },
-    // --- ADDED USER'S POSITION ---
     { rank: 6, username: "You", avatar: null, totalPnL: 8500.50, winRate: 65.0, totalTrades: 150 },
   ];
 
@@ -33,7 +32,7 @@ const Leaderboard = () => {
       case 3:
         return <Award className="h-5 w-5 text-amber-600" />;
       default:
-        return <span className="font-bold text-base text-muted-foreground">#{rank}</span>;
+        return <span className="font-bold text-sm text-muted-foreground">#{rank}</span>;
     }
   };
 
@@ -41,15 +40,15 @@ const Leaderboard = () => {
     <div className="container mx-auto py-8 space-y-8">
       <div className="text-center space-y-2">
         <div className="flex justify-center mb-2">
-          <div className="bg-gradient-primary p-3 rounded-full">
-            <Trophy className="h-8 w-8 text-primary-foreground" />
+          <div className="bg-gradient-primary p-2 rounded-full">
+            <Trophy className="h-6 w-6 text-primary-foreground" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Leaderboard
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Discover the top prediction market traders.
+        <p className="text-base text-muted-foreground">
+          Discover the top traders.
         </p>
       </div>
 
@@ -63,16 +62,15 @@ const Leaderboard = () => {
         <TabsContent value="all-time" className="mt-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Top Traders</CardTitle>
+              <CardTitle className="text-lg">Top Traders</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {topTraders.map((trader) => (
                   <div 
                     key={trader.rank} 
-                    // --- UPDATED: Conditional styling for the user's row ---
                     className={cn(
-                      "flex items-center justify-between p-3 border rounded-lg transition-colors",
+                      "flex items-center justify-between p-2.5 border rounded-lg transition-colors",
                       trader.username === 'You' 
                         ? 'bg-primary/10 border-primary/50' 
                         : 'hover:bg-accent/50'
@@ -80,27 +78,34 @@ const Leaderboard = () => {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center justify-center w-8">{getRankIcon(trader.rank)}</div>
-                      <Avatar className="w-10 h-10">
+                      <Avatar className="w-8 h-8">
                         <AvatarImage src={trader.avatar || undefined} />
                         <AvatarFallback className={cn(
+                          "text-xs",
                           trader.username === 'You' ? 'bg-primary text-primary-foreground' : 'bg-gradient-primary text-primary-foreground'
                         )}>
-                          <User className="w-5 h-5" />
+                          <User className="w-4 h-4" />
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold text-sm">{trader.username}</h3>
-                        <p className="text-xs text-muted-foreground">{trader.totalTrades} trades</p>
+                        {/* --- CHANGE IS HERE --- */}
+                        <h3 className="font-semibold text-sm">
+                          {trader.username === 'You'
+                            ? trader.username
+                            : trader.username.length > 5
+                            ? `${trader.username.substring(0, 5)}...`
+                            : trader.username}
+                        </h3>
+                        <p className="text-xs text-muted-foreground leading-tight">{trader.totalTrades}</p>
+                        <p className="text-xs text-muted-foreground leading-tight">trades</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <DollarSign className="h-4 w-4 text-success" />
-                          <p className="font-semibold text-sm text-success">{trader.totalPnL.toLocaleString()}</p>
-                        </div>
-                        <p className="text-xs text-primary">{trader.winRate}% Win Rate</p>
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <DollarSign className="h-3.5 w-3.5 text-success" />
+                        <p className="font-semibold text-sm text-success">{trader.totalPnL.toLocaleString()}</p>
                       </div>
+                      <p className="text-xs text-primary">{trader.winRate}% Win Rate</p>
                     </div>
                   </div>
                 ))}
