@@ -9,12 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
   Trophy,
-  Clock,
-  CheckCircle,
   User,
   Wallet,
   PackageOpen
@@ -54,6 +49,7 @@ const Portfolio = () => {
     }
   }, [isConnected]);
 
+  // Mock data
   const portfolioStats = { totalInvested: 2450.75, totalWinnings: 1820.30, realizedPnL: -630.45, activePositions: 2, completedTrades: 23 };
   const positions = [
     { id: "1", question: "Will Bitcoin reach $100,000 by the end of 2024?", category: "CRYPTO", option: "Yes", shares: 125, avgPrice: 0.65, currentPrice: 0.68, currentValue: 85.00, pnl: 3.75, status: "Active", canClaim: false },
@@ -64,6 +60,14 @@ const Portfolio = () => {
   const tradeHistory = [
     { id: "1", date: "2024-09-15", market: "Bitcoin $100k by 2024", action: "Buy", option: "Yes", shares: 125, price: 0.65, total: 81.25 },
     { id: "2", date: "2024-09-10", market: "Presidential Election 2024", action: "Buy", option: "Democrat", shares: 200, price: 0.48, total: 96.00 },
+  ];
+  
+  const summaryStats = [
+    { label: "Invested", value: `$${portfolioStats.totalInvested.toLocaleString()}` },
+    { label: "Winnings", value: `$${portfolioStats.totalWinnings.toLocaleString()}`, colorClass: "text-success" },
+    { label: "Realized P&L", value: `${portfolioStats.realizedPnL < 0 ? '-' : ''}$${Math.abs(portfolioStats.realizedPnL).toLocaleString()}`, colorClass: portfolioStats.realizedPnL >= 0 ? 'text-success' : 'text-destructive' },
+    { label: "Active", value: portfolioStats.activePositions },
+    { label: "Trades", value: portfolioStats.completedTrades },
   ];
 
   const activePositions = positions.filter(p => p.status === 'Active');
@@ -91,12 +95,18 @@ const Portfolio = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card><CardContent className="p-6 text-center"><DollarSign className="h-8 w-8 mx-auto mb-2 text-primary" /><p className="text-sm text-muted-foreground">Total Invested</p><p className="text-2xl font-bold">${portfolioStats.totalInvested.toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="p-6 text-center"><Trophy className="h-8 w-8 mx-auto mb-2 text-success" /><p className="text-sm text-muted-foreground">Total Winnings</p><p className="text-2xl font-bold text-success">${portfolioStats.totalWinnings.toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="p-6 text-center">{portfolioStats.realizedPnL >= 0 ? <TrendingUp className="h-8 w-8 mx-auto mb-2 text-success" /> : <TrendingDown className="h-8 w-8 mx-auto mb-2 text-destructive" />}<p className="text-sm text-muted-foreground">Realized P&L</p><p className={`text-2xl font-bold ${portfolioStats.realizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>${Math.abs(portfolioStats.realizedPnL).toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="p-6 text-center"><Clock className="h-8 w-8 mx-auto mb-2 text-accent" /><p className="text-sm text-muted-foreground">Active Positions</p><p className="text-2xl font-bold">{portfolioStats.activePositions}</p></CardContent></Card>
-        <Card><CardContent className="p-6 text-center"><CheckCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" /><p className="text-sm text-muted-foreground">Completed Trades</p><p className="text-2xl font-bold">{portfolioStats.completedTrades}</p></CardContent></Card>
+      <div className="grid grid-cols-2 gap-4">
+        {summaryStats.map(stat => (
+          <Card key={stat.label}>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className={`text-xl font-semibold ${stat.colorClass || ''}`}>{stat.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+        {/* The 5th item will wrap to a new line and be centered, which can look odd. 
+            We add a hidden item to make the grid even if there are 5 items. */}
+        {summaryStats.length % 2 !== 0 && <div className="hidden sm:block"></div>}
       </div>
 
       <Tabs defaultValue="active" className="w-full">
