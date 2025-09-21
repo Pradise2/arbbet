@@ -16,10 +16,11 @@ import {
   Clock,
   CheckCircle,
   User,
-  Wallet
+  Wallet,
+  PackageOpen
 } from "lucide-react";
 
-// Use the correct type helper based on the provided SDK definitions
+// Type helper to correctly infer the Farcaster user type from the SDK
 type FarcasterUser = Awaited<typeof miniAppSdk.context>['user'];
 
 const Portfolio = () => {
@@ -30,17 +31,14 @@ const Portfolio = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Only fetch data if the wallet is connected
     if (isConnected) {
       const fetchUserData = async () => {
         setIsLoading(true);
         try {
-          // Await the context and access the .user property
           const context = await miniAppSdk.context;
           if (context && context.user) {
             setFarcasterUser(context.user);
           } else {
-            // Handle case where user context might not be available
             setFarcasterUser(null);
           }
         } catch (error) {
@@ -50,16 +48,32 @@ const Portfolio = () => {
           setIsLoading(false);
         }
       };
-
       fetchUserData();
     } else {
-      // If disconnected, ensure loading is false and user is null
       setIsLoading(false);
       setFarcasterUser(null);
     }
   }, [isConnected]);
 
-  // "Connect Wallet" Gate
+  // Mock data for display purposes
+  const portfolioStats = { totalInvested: 2450.75, totalWinnings: 1820.30, realizedPnL: -630.45, activePositions: 2, completedTrades: 23 };
+  const positions = [
+    { id: "1", question: "Will Bitcoin reach $100,000 by the end of 2024?", category: "CRYPTO", option: "Yes", shares: 125, avgPrice: 0.65, currentPrice: 0.68, currentValue: 85.00, pnl: 3.75, status: "Active", canClaim: false },
+    { id: "2", question: "Who will win the 2024 US Presidential Election?", category: "POLITICS", option: "Democrat", shares: 200, avgPrice: 0.48, currentPrice: 0.52, currentValue: 104.00, pnl: 8.00, status: "Active", canClaim: false },
+    { id: "3", question: "Will Taylor Swift release a new album in 2024?", category: "ENTERTAINMENT", option: "Yes", shares: 300, avgPrice: 0.75, currentPrice: 0.84, currentValue: 252.00, pnl: 27.00, status: "Resolved", canClaim: true },
+    { id: "4", question: "Will OpenAI release GPT-5 before 2025?", category: "TECH", option: "No", shares: 500, avgPrice: 0.70, currentPrice: 0.71, currentValue: 355.00, pnl: 5.00, status: "Resolved", canClaim: true }
+  ];
+  const tradeHistory = [
+    { id: "1", date: "2024-09-15", market: "Bitcoin $100k by 2024", action: "Buy", option: "Yes", shares: 125, price: 0.65, total: 81.25 },
+    { id: "2", date: "2024-09-10", market: "Presidential Election 2024", action: "Buy", option: "Democrat", shares: 200, price: 0.48, total: 96.00 },
+    { id: "3", date: "2024-09-05", market: "Taylor Swift Album 2024", action: "Sell", option: "Yes", shares: 50, price: 0.82, total: 41.00 }
+  ];
+
+  // Filter positions into active and resolved lists
+  const activePositions = positions.filter(p => p.status === 'Active');
+  const resolvedPositions = positions.filter(p => p.status === 'Resolved');
+
+  // Gate: Show prompt if wallet is not connected
   if (!isConnected) {
     return (
       <div className="container mx-auto py-20 text-center flex flex-col items-center justify-center min-h-[60vh]">
@@ -72,52 +86,40 @@ const Portfolio = () => {
     );
   }
 
-  // Mock data for display purposes
-  const portfolioStats = { totalInvested: 2450.75, totalWinnings: 1820.30, realizedPnL: -630.45, activePositions: 8, completedTrades: 23 };
-  const positions = [
-    { id: "1", question: "Will Bitcoin reach $100,000 by the end of 2024?", category: "CRYPTO", option: "Yes", shares: 125, avgPrice: 0.65, currentPrice: 0.68, currentValue: 85.00, pnl: 3.75, status: "Active", canClaim: false },
-    { id: "2", question: "Who will win the 2024 US Presidential Election?", category: "POLITICS", option: "Democrat", shares: 200, avgPrice: 0.48, currentPrice: 0.52, currentValue: 104.00, pnl: 8.00, status: "Active", canClaim: false },
-    { id: "3", question: "Will Taylor Swift release a new album in 2024?", category: "ENTERTAINMENT", option: "Yes", shares: 300, avgPrice: 0.75, currentPrice: 0.84, currentValue: 252.00, pnl: 27.00, status: "Resolved", canClaim: true }
-  ];
-  const tradeHistory = [
-    { id: "1", date: "2024-09-15", market: "Bitcoin $100k by 2024", action: "Buy", option: "Yes", shares: 125, price: 0.65, total: 81.25 },
-    { id: "2", date: "2024-09-10", market: "Presidential Election 2024", action: "Buy", option: "Democrat", shares: 200, price: 0.48, total: 96.00 },
-    { id: "3", date: "2024-09-05", market: "Taylor Swift Album 2024", action: "Sell", option: "Yes", shares: 50, price: 0.82, total: 41.00 }
-  ];
-
+  // Render the full portfolio page if connected
   return (
     <div className="container mx-auto py-8 space-y-8">
       <div className="flex items-center space-x-4">
         {isLoading ? (
           <>
-            <Skeleton className="w-20 h-20 rounded-full" />
+            <Skeleton className="w-16 h-16 rounded-full" />
             <div className="space-y-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-5 w-64" />
+              <Skeleton className="h-7 w-40" />
+              <Skeleton className="h-4 w-32" />
             </div>
           </>
         ) : farcasterUser ? (
           <>
-            <Avatar className="w-20 h-20 border-4 border-primary/20">
+            <Avatar className="w-16 h-16 border-2 border-primary/20">
               <AvatarImage src={farcasterUser.pfpUrl} alt={farcasterUser.displayName} />
-              <AvatarFallback className="text-xl font-semibold bg-gradient-primary text-primary-foreground">
+              <AvatarFallback className="text-lg font-semibold bg-gradient-primary text-primary-foreground">
                 {farcasterUser.displayName?.[0] || farcasterUser.username?.[0]}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold">{farcasterUser.displayName}'s Portfolio</h1>
+              <h1 className="text-2xl font-bold">{farcasterUser.displayName}'s Portfolio</h1>
               <p className="text-muted-foreground">@{farcasterUser.username}</p>
             </div>
           </>
         ) : (
           <>
-            <Avatar className="w-20 h-20 border-4 border-primary/20">
-               <AvatarFallback className="text-xl font-semibold bg-gradient-primary text-primary-foreground">
-                 <User className="w-8 h-8" />
+            <Avatar className="w-16 h-16 border-2 border-primary/20">
+               <AvatarFallback className="text-lg font-semibold bg-gradient-primary text-primary-foreground">
+                 <User className="w-7 h-7" />
                </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold">Portfolio Dashboard</h1>
+              <h1 className="text-2xl font-bold">Portfolio Dashboard</h1>
               <p className="text-muted-foreground">Could not load Farcaster profile.</p>
             </div>
           </>
@@ -132,68 +134,108 @@ const Portfolio = () => {
         <Card><CardContent className="p-6 text-center"><CheckCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" /><p className="text-sm text-muted-foreground">Completed Trades</p><p className="text-2xl font-bold">{portfolioStats.completedTrades}</p></CardContent></Card>
       </div>
 
-      <Tabs defaultValue="positions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
-          <TabsTrigger value="positions">Positions</TabsTrigger>
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+          <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="resolved">Resolved</TabsTrigger>
           <TabsTrigger value="history">Trade History</TabsTrigger>
         </TabsList>
-        <TabsContent value="positions" className="mt-8">
+
+        <TabsContent value="active" className="mt-8">
           <div className="space-y-4">
-            {positions.map((position) => (
-              <Card key={position.id} className="shadow-card">
+            {activePositions.length > 0 ? (
+              activePositions.map((position) => (
+                <Card key={position.id} className="shadow-card">
                   <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                          <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="secondary">{position.category}</Badge>
-                                  <Badge variant={position.status === "Active" ? "outline" : "default"} className={position.status === "Resolved" ? "bg-success text-success-foreground" : ""}>{position.status}</Badge>
-                                  {position.canClaim && (<Badge className="bg-gradient-primary">Can Claim</Badge>)}
-                              </div>
-                              <h3 className="font-semibold text-lg mb-1">{position.question}</h3>
-                              <p className="text-sm text-muted-foreground">{position.shares} shares of "{position.option}" @ ${position.avgPrice}</p>
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-4 lg:gap-8 items-center">
-                              <div className="text-center">
-                                  <p className="text-sm text-muted-foreground">Current Value</p>
-                                  <p className="font-semibold text-lg">${position.currentValue.toFixed(2)}</p>
-                              </div>
-                              <div className="text-center">
-                                  <p className="text-sm text-muted-foreground">P&L</p>
-                                  <p className={`font-semibold text-lg ${position.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>{position.pnl >= 0 ? '+' : ''}${position.pnl.toFixed(2)}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                  {position.canClaim && (<Button className="bg-gradient-success hover:opacity-90"><Trophy className="mr-2 h-4 w-4" />Claim Winnings</Button>)}
-                                  {position.status === "Active" && (<Button variant="outline" onClick={() => navigate(`/market/${position.id}`)}>View Market</Button>)}
-                              </div>
-                          </div>
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="secondary">{position.category}</Badge>
+                          <Badge variant="outline">{position.status}</Badge>
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">{position.question}</h3>
+                        <p className="text-sm text-muted-foreground">{position.shares} shares of "{position.option}" @ ${position.avgPrice}</p>
                       </div>
+                      <div className="flex flex-col sm:flex-row gap-4 lg:gap-8 items-center">
+                        <div className="text-center"><p className="text-sm text-muted-foreground">Current Value</p><p className="font-semibold text-lg">${position.currentValue.toFixed(2)}</p></div>
+                        <div className="text-center"><p className="text-sm text-muted-foreground">P&L</p><p className={`font-semibold text-lg ${position.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>{position.pnl >= 0 ? '+' : ''}${position.pnl.toFixed(2)}</p></div>
+                        <Button variant="outline" onClick={() => navigate(`/market/${position.id}`)}>View Market</Button>
+                      </div>
+                    </div>
                   </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-10 text-center">
+                  <PackageOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold">No Active Positions</h3>
+                  <p className="text-muted-foreground">Browse the markets to start trading.</p>
+                </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </TabsContent>
+
+        <TabsContent value="resolved" className="mt-8">
+          <div className="space-y-4">
+            {resolvedPositions.length > 0 ? (
+              resolvedPositions.map((position) => (
+                <Card key={position.id} className="shadow-card">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="secondary">{position.category}</Badge>
+                          <Badge className="bg-success text-success-foreground">{position.status}</Badge>
+                          {position.canClaim && (<Badge className="bg-gradient-primary">Can Claim</Badge>)}
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">{position.question}</h3>
+                        <p className="text-sm text-muted-foreground">{position.shares} shares of "{position.option}" @ ${position.avgPrice}</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-4 lg:gap-8 items-center">
+                        <div className="text-center"><p className="text-sm text-muted-foreground">Final Value</p><p className="font-semibold text-lg">${position.currentValue.toFixed(2)}</p></div>
+                        <div className="text-center"><p className="text-sm text-muted-foreground">P&L</p><p className={`font-semibold text-lg ${position.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>{position.pnl >= 0 ? '+' : ''}${position.pnl.toFixed(2)}</p></div>
+                        {position.canClaim && (<Button className="bg-gradient-success hover:opacity-90"><Trophy className="mr-2 h-4 w-4" />Claim Winnings</Button>)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-10 text-center">
+                  <PackageOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold">No Resolved Positions</h3>
+                  <p className="text-muted-foreground">Your completed trades will appear here once markets are resolved.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="history" className="mt-8">
           <Card>
-              <CardHeader><CardTitle>Trade History</CardTitle></CardHeader>
-              <CardContent>
-                  <div className="space-y-4">
-                      {tradeHistory.map((trade) => (
-                          <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm text-muted-foreground">{trade.date}</span>
-                                      <Badge variant={trade.action === "Buy" ? "default" : "outline"} className={trade.action === "Buy" ? "bg-success" : "bg-destructive"}>{trade.action}</Badge>
-                                  </div>
-                                  <p className="font-medium">{trade.market}</p>
-                                  <p className="text-sm text-muted-foreground">{trade.shares} shares of "{trade.option}" @ ${trade.price}</p>
-                              </div>
-                              <div className="text-right">
-                                  <p className="font-semibold">${trade.total.toFixed(2)}</p>
-                              </div>
-                          </div>
-                      ))}
+            <CardHeader><CardTitle>Trade History</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {tradeHistory.map((trade) => (
+                  <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm text-muted-foreground">{trade.date}</span>
+                        <Badge variant={trade.action === "Buy" ? "default" : "outline"} className={trade.action === "Buy" ? "bg-success" : "bg-destructive"}>{trade.action}</Badge>
+                      </div>
+                      <p className="font-medium">{trade.market}</p>
+                      <p className="text-sm text-muted-foreground">{trade.shares} shares of "{trade.option}" @ ${trade.price}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">${trade.total.toFixed(2)}</p>
+                    </div>
                   </div>
-              </CardContent>
+                ))}
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
