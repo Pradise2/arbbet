@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, TrendingUp, User } from "lucide-react";
@@ -35,20 +35,13 @@ const Header = () => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
-  // Filter connectors - show specific wallet connectors and WalletConnect
   const availableConnectors = connectors.filter((connector) => {
-    // Always show WalletConnect
     if (connector.type === 'walletConnect') return true;
-    
-    // Show specific wallet connectors (detected via EIP-6963)
     if (connector.id !== 'injected') return true;
-    
-    // Show generic injected only if we have window.ethereum and no specific wallets
     const hasSpecificWallets = connectors.some(c => c.id !== 'injected' && c.id !== 'walletConnect');
     return !hasSpecificWallets && (typeof window !== 'undefined' && window.ethereum);
   });
 
-  // Remove duplicates by name to avoid showing "MetaMask" multiple times
   const uniqueConnectors = availableConnectors.reduce((acc, connector) => {
     const existing = acc.find(c => c.name === connector.name);
     if (!existing) {
@@ -72,10 +65,16 @@ const Header = () => {
           </NavLink>
           <nav className="hidden items-center space-x-4 md:flex md:space-x-6">
             <NavLink to="/" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Home</NavLink>
-            <NavLink to="/markets" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Markets</NavLink>
-            <NavLink to="/portfolio" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Portfolio</NavLink>
-            <NavLink to="/leaderboard" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Leaderboard</NavLink>
-            <NavLink to="/liquidity" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Liquidity</NavLink>
+            
+            {/* Conditionally render all links except Home based on connection status */}
+            {isConnected && (
+              <>
+                <NavLink to="/markets" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Markets</NavLink>
+                <NavLink to="/portfolio" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Portfolio</NavLink>
+                <NavLink to="/leaderboard" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Leaderboard</NavLink>
+                <NavLink to="/liquidity" className={({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}>Liquidity</NavLink>
+              </>
+            )}
           </nav>
         </div>
         
