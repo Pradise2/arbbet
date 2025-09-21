@@ -23,7 +23,8 @@ const App = () => (
       <BrowserRouter>
         <div className="min-h-screen bg-background flex flex-col">
           <Header />
-          <main className="flex-1">
+          {/* UPDATE: Added padding-bottom for mobile footer spacing */}
+          <main className="flex-1 pb-20 md:pb-0">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/markets" element={<Marketplace />} />
