@@ -2,6 +2,7 @@
 import { http, createConfig } from "wagmi";
 import { mainnet, sepolia, base } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
+import { farcasterMiniApp as miniAppConnector } from '@farcaster/miniapp-wagmi-connector';
 
 // --- PASTE YOUR PROJECT ID HERE ---
 const projectId = "cb46d9497eb6ef8306af418593b93703"; // Get from https://cloud.walletconnect.com
@@ -16,6 +17,7 @@ if (!projectId || projectId === "cb46d9497eb6ef8306af418593b93703") {
 export const config = createConfig({
   chains: [mainnet, sepolia, base],
   connectors: [
+      miniAppConnector(),
     // EIP-6963 will automatically detect installed wallets
     injected({
       shimDisconnect: true,
