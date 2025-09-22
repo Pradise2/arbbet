@@ -1,42 +1,174 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { gql } from 'graphql-request';
+import { client } from "@/lib/graphql";
+import { formatTimeRemaining } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import MarketCard from "@/components/MarketCard";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// --- TypeScript types for our GraphQL response ---
+interface MarketCreated {
+  id: string;
+  marketId: string;
+  question: string;
+  options: string[];
+  endTime: string;
+  category: number;
+  blockTimestamp: string;
+}
+
+interface MarketResolved {
+  marketId: string;
+  winningOptionId: string;
+}
+
+interface MarketplaceData {
+  marketCreateds: MarketCreated[];
+  marketResolveds: MarketResolved[];
+}
+
+// --- GraphQL Query ---
+const GET_MARKETS = gql`
+  query GetMarketplaceData {
+    marketCreateds(first: 100, orderBy: blockTimestamp, orderDirection: desc) {
+      id
+      marketId
+      question
+      options
+      endTime
+      category
+      blockTimestamp
+    }
+    marketResolveds(first: 100) {
+      marketId
+      winningOptionId
+    }
+  }
+`;
+
+// --- Helper to map category ID from the contract to a readable string ---
+const categoryMap: { [key: number]: string } = {
+  0: 'POLITICS', 1: 'SPORTS', 2: 'CRYPTO', 3: 'ENTERTAINMENT', 4: 'TECH', 5: 'FINANCE', 6: 'OTHER'
+};
 
 const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
-  const categories = ["ALL", "POLITICS", "SPORTS", "CRYPTO", "ENTERTAINMENT", "TECH", "FINANCE"];
-  const visibleCategories = categories.slice(0, 4); // Show first 4
-  const hiddenCategories = categories.slice(4); // Hide the rest
+  const categories = ["ALL", ...Object.values(categoryMap)];
+  const visibleCategories = categories.slice(0, 5); // Show ALL + first 4
+  const hiddenCategories = categories.slice(5);
 
-  const mockMarkets = [
-    { id: "1", question: "Will Bitcoin reach $100,000 by the end of 2024?", category: "CRYPTO", isFreeEntry: true, options: [ { name: "Yes", price: 68, color: "success" }, { name: "No", price: 32, color: "destructive" } ], volume: "$125,420", timeRemaining: "23 days", endTime: "2024-12-31T23:59:59Z", status: "Active" },
-    { id: "2", question: "Who will win the 2024 US Presidential Election?", category: "POLITICS", options: [ { name: "Democrat", price: 52, color: "accent" }, { name: "Republican", price: 48, color: "destructive" } ], volume: "$2,340,123", timeRemaining: "45 days", endTime: "2024-11-05T23:59:59Z", status: "Active" },
-    { id: "3", question: "Will the next iPhone support 8K video recording?", category: "TECH", isFreeEntry: true, options: [ { name: "Yes", price: 75, color: "success" }, { name: "No", price: 25, color: "destructive" } ], volume: "$89,320", timeRemaining: "12 days", endTime: "2024-10-15T23:59:59Z", status: "Active" },
-    { id: "4", question: "Will Taylor Swift release a new album in 2024?", category: "ENTERTAINMENT", options: [ { name: "Yes", price: 84, color: "success" }, { name: "No", price: 16, color: "destructive" } ], volume: "$67,890", timeRemaining: "67 days", endTime: "2024-12-31T23:59:59Z", status: "Active" },
-    { id: "5", question: "Will the Lakers make the NBA playoffs this season?", category: "SPORTS", options: [ { name: "Yes", price: 43, color: "success" }, { name: "No", price: 57, color: "destructive" } ], volume: "$156,780", timeRemaining: "89 days", endTime: "2025-04-15T23:59:59Z", status: "Active" },
-    { id: "6", question: "Will OpenAI release GPT-5 before 2025?", category: "TECH", isFreeEntry: true, options: [ { name: "Yes", price: 29, color: "success" }, { name: "No", price: 71, color: "destructive" } ], volume: "$234,567", timeRemaining: "78 days", endTime: "2024-12-31T23:59:59Z", status: "Active" },
-    { id: "7", question: "Did the Fed raise interest rates in Q2 2024?", category: "FINANCE", options: [ { name: "Yes", price: 100, color: "success" }, { name: "No", price: 0, color: "destructive" } ], volume: "$550,000", timeRemaining: "Ended", endTime: "2024-06-30T23:59:59Z", status: "Resolved" }
-  ];
+  const { data, isLoading, isError } = useQuery<MarketplaceData>({
+    queryKey: ['marketplaceData'],
+    queryFn: async () => await client.request(GET_MARKETS),
+  });
 
-  const filterMarkets = (tabStatus: "Active" | "Resolved") => {
-    return mockMarkets.filter(market => {
+  // --- Loading State ---
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 space-y-6">
+        <div className="text-center"><h1 className="text-3xl font-bold">Loading Markets...</h1></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="space-y-3 p-4 border rounded-lg">
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-10 w-full mt-4" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // --- Error State ---
+  if (isError) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <h1 className="text-3xl font-bold text-destructive">Failed to load markets.</h1>
+        <p className="text-muted-foreground">Please try again later.</p>
+      </div>
+    );
+  }
+
+  // --- Data Processing ---
+  const resolvedMarketIds = new Set(data?.marketResolveds.map((m) => m.marketId) || []);
+  const allMarkets = data?.marketCreateds.map((market) => ({
+    ...market,
+    status: resolvedMarketIds.has(market.marketId) ? "Resolved" : "Active",
+    category: categoryMap[market.category] || 'OTHER',
+  })) || [];
+
+  const filterAndSortMarkets = (tab: 'popular' | 'newest' | 'ending-soon' | 'ended') => {
+    const tabStatus = tab === 'ended' ? 'Resolved' : 'Active';
+    
+    let filtered = allMarkets.filter((market) => {
       const matchesSearch = market.question.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "ALL" || market.category === selectedCategory;
       const matchesStatus = market.status === tabStatus;
       return matchesSearch && matchesCategory && matchesStatus;
     });
+
+    switch(tab) {
+        case 'popular':
+            // Note: Volume is a placeholder. For real sorting, add totalVolume to your Subgraph Market entity.
+            return filtered;
+        case 'newest':
+            return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
+        case 'ending-soon':
+            return filtered.sort((a, b) => parseInt(a.endTime) - parseInt(b.endTime));
+        case 'ended':
+            return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
+        default:
+            return filtered;
+    }
+  };
+
+  const popularMarkets = filterAndSortMarkets('popular');
+  const newestMarkets = filterAndSortMarkets('newest');
+  const endingSoonMarkets = filterAndSortMarkets('ending-soon');
+  const endedMarkets = filterAndSortMarkets('ended');
+
+  // Helper to render a list of markets or an empty state message
+  const renderMarketList = (markets: typeof allMarkets) => {
+    if (markets.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-lg text-muted-foreground">No markets found matching your criteria.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {markets.map((market) => {
+          const endTimeInMs = parseInt(market.endTime) * 1000;
+          
+          return (
+            <MarketCard 
+              key={market.id} 
+              id={market.marketId} 
+              question={market.question} 
+              category={market.category} 
+              volume={"$0"}
+              options={[
+                  { name: market.options[0] || "Yes", price: 50, color: "success" }, 
+                  { name: market.options[1] || "No", price: 50, color: "destructive" }
+              ]} 
+              timeRemaining={formatTimeRemaining(endTimeInMs)}
+              endTime={new Date(endTimeInMs).toISOString()} 
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -51,28 +183,18 @@ const Marketplace = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input type="text" placeholder="Search markets..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9" />
         </div>
-        
-        {/* --- UPDATED FILTER BADGES WITH DROPDOWN --- */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           {visibleCategories.map((category) => (
-            <Badge key={category} variant={selectedCategory === category ? "default" : "secondary"} className="cursor-pointer" onClick={() => setSelectedCategory(category)}>
-              {category}
-            </Badge>
+            <Badge key={category} variant={selectedCategory === category ? "default" : "secondary"} className="cursor-pointer" onClick={() => setSelectedCategory(category)}>{category}</Badge>
           ))}
           {hiddenCategories.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                  More <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-xs">More <ChevronDown className="h-3 w-3 ml-1" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {hiddenCategories.map((category) => (
-                  <DropdownMenuItem key={category} onSelect={() => setSelectedCategory(category)}>
-                    {category}
-                  </DropdownMenuItem>
-                ))}
+                {hiddenCategories.map((category) => (<DropdownMenuItem key={category} onSelect={() => setSelectedCategory(category)}>{category}</DropdownMenuItem>))}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -86,27 +208,10 @@ const Marketplace = () => {
           <TabsTrigger value="ending-soon">Ending Soon</TabsTrigger>
           <TabsTrigger value="ended">Ended</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="popular" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filterMarkets("Active").sort((a, b) => parseFloat(b.volume.replace(/[$,]/g, '')) - parseFloat(a.volume.replace(/[$,]/g, ''))).map((market) => (<MarketCard key={market.id} {...market} />))}
-          </div>
-        </TabsContent>
-        <TabsContent value="newest" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filterMarkets("Active").sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()).map((market) => (<MarketCard key={market.id} {...market} />))}
-          </div>
-        </TabsContent>
-        <TabsContent value="ending-soon" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filterMarkets("Active").sort((a, b) => new Date(a.endTime).getTime() - new Date(b.endTime).getTime()).map((market) => (<MarketCard key={market.id} {...market} />))}
-          </div>
-        </TabsContent>
-        <TabsContent value="ended" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filterMarkets("Resolved").map((market) => (<MarketCard key={market.id} {...market} />))}
-          </div>
-        </TabsContent>
+        <TabsContent value="popular" className="mt-6">{renderMarketList(popularMarkets)}</TabsContent>
+        <TabsContent value="newest" className="mt-6">{renderMarketList(newestMarkets)}</TabsContent>
+        <TabsContent value="ending-soon" className="mt-6">{renderMarketList(endingSoonMarkets)}</TabsContent>
+        <TabsContent value="ended" className="mt-6">{renderMarketList(endedMarkets)}</TabsContent>
       </Tabs>
     </div>
   );

@@ -1,6 +1,4 @@
-export const policastAbi =[
-  {
-    "abi": [
+export const policastMarketV3Abi = [
       {
         "type": "constructor",
         "inputs": [
@@ -2991,14 +2989,12 @@ export const policastAbi =[
         "type": "error",
         "name": "TransferFailed",
         "inputs": []
-      }
-    ]
-  }
-] as const;
+      },
+    ] as const;
 
 export const policastContract = {
-  address: '0x8c7a476FFdB5818f241cCE82E6f2806a53F0cC32',
-  abi: policastAbi,
+  address: '0x01b1be00D7FF8751b62fD0e7886A6962D3728418',
+  abi: policastMarketV3Abi,
 } as const;
 
-export const policastMarketV3Address = '0x8c7a476FFdB5818f241cCE82E6f2806a53F0cC32';
+export const policastMarketV3Address = '0x01b1be00D7FF8751b62fD0e7886A6962D3728418';
