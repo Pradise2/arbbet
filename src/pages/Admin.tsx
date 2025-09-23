@@ -1,6 +1,7 @@
 // src/pages/Admin.tsx
 import CreateMarketForm from "@/components/admin/CreateMarketForm";
-import ValidateMarketList from "@/components/admin/ValidateMarketList"; // 1. Import the new component
+import ValidateMarketList from "@/components/admin/ValidateMarketList";
+import ResolveMarketList from "@/components/admin/ResolveMarketList"; // 1. Import
 
 const Admin = () => {
   return (
@@ -10,11 +11,9 @@ const Admin = () => {
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage markets and platform settings.</p>
         </div>
-
         <CreateMarketForm />
-        
-        {/* 2. Add the validation list component */}
         <ValidateMarketList />
+        <ResolveMarketList /> {/* 2. Add the new component */}
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
-// src/components/admin/ValidateMarketList.tsx
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gql } from "graphql-request";
 import { client } from "@/lib/graphql";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
@@ -9,29 +8,27 @@ import { useEffect } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Query to get all created and all validated markets
-const GET_VALIDATION_DATA = gql`
-  query GetValidationData {
-    marketCreateds(orderBy: blockTimestamp, orderDirection: desc) {
-      marketId
+// --- UPDATED GraphQL Query ---
+// We now query the aggregated Market entity and filter for "Pending" status.
+const GET_PENDING_MARKETS = gql`
+  query GetPendingMarkets {
+    markets(where: { status: "Pending" }, orderBy: blockTimestamp, orderDirection: desc) {
+      id
       question
-    }
-    marketValidateds {
-      marketId
     }
   }
 `;
 
 const ValidateMarketList = () => {
-  const { data, isLoading, isError, refetch } = useQuery<any>({
-    queryKey: ['validationData'],
-    queryFn: async () => await client.request(GET_VALIDATION_DATA),
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ['pendingMarkets'], // A new, descriptive query key
+    queryFn: async () => await client.request(GET_PENDING_MARKETS),
   });
 
-  const { data: hash, writeContract, isPending } = useWriteContract();
+  const { data: hash, writeContract, isPending, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
   const handleValidate = (marketId: string) => {
@@ -46,16 +43,21 @@ const ValidateMarketList = () => {
 
   useEffect(() => {
     if (isConfirmed) {
-      toast.success("Market validated successfully!");
-      refetch(); // Refetch the list to remove the validated market
+      toast.success("Market validated successfully! Refreshing list...");
+      // Invalidate the query to refetch the list.
+      // The validated market's status will change, so it will disappear from this list.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['pendingMarkets'] });
+      }, 2000); // 2-second delay to allow the subgraph to index the change
+      reset();
     }
-  }, [isConfirmed, refetch]);
+  }, [isConfirmed, queryClient, reset]);
   
   if (isLoading) return <Skeleton className="h-48 w-full" />;
   if (isError) return <p className="text-destructive">Failed to load markets for validation.</p>;
 
-  const validatedMarketIds = new Set(data?.marketValidateds.map((m: any) => m.marketId) || []);
-  const unvalidatedMarkets = data?.marketCreateds.filter((m: any) => !validatedMarketIds.has(m.marketId)) || [];
+  // --- Data Handling is now much simpler ---
+  const unvalidatedMarkets = data?.markets || [];
 
   return (
     <Card>
@@ -70,17 +72,17 @@ const ValidateMarketList = () => {
           <p className="text-muted-foreground text-center py-4">No markets are currently pending validation.</p>
         ) : (
           unvalidatedMarkets.map((market: any) => (
-            <div key={market.marketId} className="flex items-center justify-between p-3 border rounded-lg">
+            <div key={market.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div>
                 <p className="font-semibold">{market.question}</p>
-                <p className="text-sm text-muted-foreground">ID: {market.marketId}</p>
+                <p className="text-sm text-muted-foreground">ID: {market.id}</p>
               </div>
               <Button 
                 size="sm" 
-                onClick={() => handleValidate(market.marketId)}
+                onClick={() => handleValidate(market.id)}
                 disabled={isPending || isConfirming}
               >
-                Validate
+                {isPending || isConfirming ? "Validating..." : "Validate"}
               </Button>
             </div>
           ))
