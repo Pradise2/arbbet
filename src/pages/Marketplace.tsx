@@ -3,6 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { gql } from 'graphql-request';
 import { client } from "@/lib/graphql";
 import { formatTimeRemaining } from "@/lib/utils";
+import { useReadContracts } from "wagmi";
+import { formatEther } from "viem";
+import { policastMarketV3Address, policastMarketV3Abi } from "@/lib/contract";
+
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import MarketCard from "@/components/MarketCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// --- TypeScript types for our GraphQL response ---
+// --- TypeScript types ---
 interface MarketCreated {
   id: string;
   marketId: string;
@@ -25,7 +29,6 @@ interface MarketCreated {
 
 interface MarketResolved {
   marketId: string;
-  winningOptionId: string;
 }
 
 interface MarketplaceData {
@@ -47,12 +50,10 @@ const GET_MARKETS = gql`
     }
     marketResolveds(first: 100) {
       marketId
-      winningOptionId
     }
   }
 `;
 
-// --- Helper to map category ID from the contract to a readable string ---
 const categoryMap: { [key: number]: string } = {
   0: 'POLITICS', 1: 'SPORTS', 2: 'CRYPTO', 3: 'ENTERTAINMENT', 4: 'TECH', 5: 'FINANCE', 6: 'OTHER'
 };
@@ -62,26 +63,36 @@ const Marketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
   const categories = ["ALL", ...Object.values(categoryMap)];
-  const visibleCategories = categories.slice(0, 5); // Show ALL + first 4
+  const visibleCategories = categories.slice(0, 5);
   const hiddenCategories = categories.slice(5);
 
-  const { data, isLoading, isError } = useQuery<MarketplaceData>({
+  const { data: subgraphData, isLoading: isSubgraphLoading, isError: isSubgraphError } = useQuery<MarketplaceData>({
     queryKey: ['marketplaceData'],
     queryFn: async () => await client.request(GET_MARKETS),
   });
 
-  // --- Loading State ---
-  if (isLoading) {
+  const allMarketsFromSubgraph = subgraphData?.marketCreateds || [];
+
+  const { data: pricesData } = useReadContracts({
+    contracts: allMarketsFromSubgraph.flatMap((market) => 
+      market.options.map((_, index) => ({
+        address: policastMarketV3Address,
+        abi: policastMarketV3Abi,
+        functionName: 'getMarketOption',
+        args: [BigInt(market.marketId), BigInt(index)],
+      }))
+    ),
+    enabled: allMarketsFromSubgraph.length > 0,
+  });
+
+  if (isSubgraphLoading) {
     return (
       <div className="container mx-auto py-8 space-y-6">
         <div className="text-center"><h1 className="text-3xl font-bold">Loading Markets...</h1></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="space-y-3 p-4 border rounded-lg">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-10 w-full mt-4" />
+              <Skeleton className="h-4 w-1/4" /><Skeleton className="h-6 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-10 w-full mt-4" />
             </div>
           ))}
         </div>
@@ -89,27 +100,48 @@ const Marketplace = () => {
     );
   }
 
-  // --- Error State ---
-  if (isError) {
+  if (isSubgraphError) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h1 className="text-3xl font-bold text-destructive">Failed to load markets.</h1>
-        <p className="text-muted-foreground">Please try again later.</p>
+        <h1 className="text-3xl font-bold text-destructive">Failed to load markets.</h1><p className="text-muted-foreground">Please try again later.</p>
       </div>
     );
   }
 
-  // --- Data Processing ---
-  const resolvedMarketIds = new Set(data?.marketResolveds.map((m) => m.marketId) || []);
-  const allMarkets = data?.marketCreateds.map((market) => ({
-    ...market,
-    status: resolvedMarketIds.has(market.marketId) ? "Resolved" : "Active",
-    category: categoryMap[market.category] || 'OTHER',
-  })) || [];
+  const resolvedMarketIds = new Set(subgraphData?.marketResolveds.map((m) => m.marketId) || []);
+  
+  const allMarkets = allMarketsFromSubgraph.map((market, marketIndex) => {
+    const optionsWithPrice = market.options.map((optName, optionIndex) => {
+      const priceDataIndex = marketIndex * market.options.length + optionIndex;
+      const optionResult = pricesData?.[priceDataIndex]?.result as any[];
+      const priceBigInt = optionResult ? optionResult[4] : BigInt(0);
+      return { name: optName, rawPrice: priceBigInt };
+    });
+
+    const sumOfRawPrices = optionsWithPrice.reduce((sum, current) => sum + current.rawPrice, BigInt(0));
+
+    const normalizedOptions = optionsWithPrice.map(opt => {
+      let normalizedPrice = 50; // Default to 50%
+      if (sumOfRawPrices > BigInt(0)) {
+        const priceAsFloat = parseFloat(formatEther(opt.rawPrice));
+        const sumAsFloat = parseFloat(formatEther(sumOfRawPrices));
+        if (sumAsFloat > 0) {
+            normalizedPrice = parseFloat(((priceAsFloat / sumAsFloat) * 100).toFixed(2));
+        }
+      }
+      return { name: opt.name, price: normalizedPrice, color: "success" };
+    });
+
+    return {
+      ...market,
+      status: resolvedMarketIds.has(market.marketId) ? "Resolved" : "Active",
+      category: categoryMap[market.category] || 'OTHER',
+      options: normalizedOptions,
+    };
+  });
 
   const filterAndSortMarkets = (tab: 'popular' | 'newest' | 'ending-soon' | 'ended') => {
     const tabStatus = tab === 'ended' ? 'Resolved' : 'Active';
-    
     let filtered = allMarkets.filter((market) => {
       const matchesSearch = market.question.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "ALL" || market.category === selectedCategory;
@@ -118,17 +150,11 @@ const Marketplace = () => {
     });
 
     switch(tab) {
-        case 'popular':
-            // Note: Volume is a placeholder. For real sorting, add totalVolume to your Subgraph Market entity.
-            return filtered;
-        case 'newest':
-            return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
-        case 'ending-soon':
-            return filtered.sort((a, b) => parseInt(a.endTime) - parseInt(b.endTime));
-        case 'ended':
-            return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
-        default:
-            return filtered;
+        case 'popular': return filtered;
+        case 'newest': return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
+        case 'ending-soon': return filtered.sort((a, b) => parseInt(a.endTime) - parseInt(b.endTime));
+        case 'ended': return filtered.sort((a, b) => parseInt(b.blockTimestamp) - parseInt(a.blockTimestamp));
+        default: return filtered;
     }
   };
 
@@ -137,36 +163,24 @@ const Marketplace = () => {
   const endingSoonMarkets = filterAndSortMarkets('ending-soon');
   const endedMarkets = filterAndSortMarkets('ended');
 
-  // Helper to render a list of markets or an empty state message
   const renderMarketList = (markets: typeof allMarkets) => {
     if (markets.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-lg text-muted-foreground">No markets found matching your criteria.</p>
-        </div>
-      );
+      return (<div className="text-center py-12"><p className="text-lg text-muted-foreground">No markets found matching your criteria.</p></div>);
     }
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {markets.map((market) => {
-          const endTimeInMs = parseInt(market.endTime) * 1000;
-          
-          return (
-            <MarketCard 
-              key={market.id} 
-              id={market.marketId} 
-              question={market.question} 
-              category={market.category} 
-              volume={"$0"}
-              options={[
-                  { name: market.options[0] || "Yes", price: 50, color: "success" }, 
-                  { name: market.options[1] || "No", price: 50, color: "destructive" }
-              ]} 
-              timeRemaining={formatTimeRemaining(endTimeInMs)}
-              endTime={new Date(endTimeInMs).toISOString()} 
-            />
-          );
-        })}
+        {markets.map((market) => (
+          <MarketCard 
+            key={market.id} 
+            id={market.marketId} 
+            question={market.question} 
+            category={market.category} 
+            volume={"$0"}
+            options={market.options}
+            timeRemaining={formatTimeRemaining(parseInt(market.endTime) * 1000)}
+            endTime={new Date(parseInt(market.endTime) * 1000).toISOString()} 
+          />
+        ))}
       </div>
     );
   };
@@ -177,7 +191,6 @@ const Marketplace = () => {
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Prediction Markets</h1>
         <p className="text-base text-muted-foreground max-w-xl mx-auto">Trade on the outcomes of future events and put your knowledge to work.</p>
       </div>
-
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative w-full sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -200,7 +213,6 @@ const Marketplace = () => {
           )}
         </div>
       </div>
-
       <Tabs defaultValue="popular" className="w-full">
         <TabsList className="grid w-full grid-cols-4 max-w-md mx-auto">
           <TabsTrigger value="popular">Popular</TabsTrigger>
