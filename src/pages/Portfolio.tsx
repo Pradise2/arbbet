@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gql } from 'graphql-request';
 import { client } from "@/lib/graphql";
 import { formatEther } from "viem";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { policastMarketV3Address, policastMarketV3Abi } from "@/lib/contract";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Trophy,
@@ -19,13 +22,13 @@ import {
   PackageOpen
 } from "lucide-react";
 
-// --- TypeScript Types for the GraphQL Response ---
+// --- TypeScript Types ---
 interface Position {
   id: string;
   user: string;
-  shares: string[]; // Comes as an array of BigInt strings
+  shares: string[];
   market: {
-    id: string; // This is the marketId
+    id: string;
     question: string;
     category: number;
     status: "Active" | "Resolved" | "Invalidated";
@@ -37,7 +40,7 @@ interface PortfolioData {
   positions: Position[];
 }
 
-// --- GraphQL Query to get a user's positions ---
+// --- GraphQL Query ---
 const GET_USER_POSITIONS = gql`
   query GetUserPositions($userAddress: Bytes!) {
     positions(where: { user: $userAddress }, orderBy: market__blockTimestamp, orderDirection: desc) {
@@ -62,15 +65,51 @@ const categoryMap: { [key: number]: string } = {
 const Portfolio = () => {
   const navigate = useNavigate();
   const { address, isConnected } = useAccount();
+  const queryClient = useQueryClient();
+  
+  const { data: hash, writeContract, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  const [activeTx, setActiveTx] = useState<'claim' | null>(null);
 
-  const { data, isLoading, isError } = useQuery<PortfolioData>({
+  const { data, isLoading, isError, refetch: refetchPositions } = useQuery<PortfolioData>({
     queryKey: ['userPositions', address],
     queryFn: async () => await client.request(GET_USER_POSITIONS, { userAddress: address?.toLowerCase() }),
     enabled: !!isConnected && !!address,
   });
-  
-  // Farcaster data fetching can be added back here if needed
-  const [farcasterUser, setFarcasterUser] = useState<any>(null);
+
+  const handleClaimSubmit = (marketId: string) => {
+    setActiveTx('claim');
+    toast.info("Please confirm in your wallet to claim your winnings.");
+    writeContract({
+      address: policastMarketV3Address,
+      abi: policastMarketV3Abi,
+      functionName: "claimWinnings",
+      args: [BigInt(marketId)],
+    });
+  };
+
+  useEffect(() => {
+    if (isPending) { toast.loading("Confirm in your wallet..."); }
+    if (isConfirming) { toast.loading("Transaction is confirming..."); }
+    if (isConfirmed) {
+      toast.dismiss();
+      if (activeTx === 'claim') {
+        toast.success("Winnings claimed successfully! Refreshing data...");
+        setTimeout(() => {
+          toast.info("Portfolio updated!");
+          // Refetching the main query is sufficient
+          queryClient.invalidateQueries({ queryKey: ['userPositions', address] });
+        }, 3000);
+      }
+      setActiveTx(null);
+      reset();
+    }
+    if (error) { 
+      toast.error("Transaction failed", { description: error.message }); 
+      setActiveTx(null);
+      reset(); 
+    }
+  }, [isConfirmed, isConfirming, isPending, error, activeTx, address, queryClient, reset]);
 
   if (!isConnected) {
     return (
@@ -86,8 +125,14 @@ const Portfolio = () => {
   const activePositions = allPositions.filter(p => p.market.status === 'Active');
   const resolvedPositions = allPositions.filter(p => p.market.status === 'Resolved');
   
-  // Mock stats can be replaced later with more complex Subgraph aggregations
-  const portfolioStats = { totalInvested: 2450.75, totalWinnings: 1820.30, realizedPnL: -630.45 };
+  const portfolioStats = { totalInvested: 2450.75, totalWinnings: 1820.30, realizedPnL: -630.45, activePositions: activePositions.length, completedTrades: resolvedPositions.length };
+  const summaryStats = [
+    { label: "Invested", value: `$${portfolioStats.totalInvested.toLocaleString()}` },
+    { label: "Winnings", value: `$${portfolioStats.totalWinnings.toLocaleString()}`, colorClass: "text-success" },
+    { label: "Realized P&L", value: `${portfolioStats.realizedPnL < 0 ? '-' : ''}$${Math.abs(portfolioStats.realizedPnL).toLocaleString()}`, colorClass: portfolioStats.realizedPnL >= 0 ? 'text-success' : 'text-destructive' },
+    { label: "Active", value: portfolioStats.activePositions },
+    { label: "Resolved", value: portfolioStats.completedTrades },
+  ];
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -101,8 +146,15 @@ const Portfolio = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* ... (Summary cards with mock data) ... */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        {summaryStats.map(stat => (
+          <Card key={stat.label}>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className={`text-xl font-semibold ${stat.colorClass || ''}`}>{stat.value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Tabs defaultValue="active" className="w-full">
@@ -121,17 +173,10 @@ const Portfolio = () => {
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary">{categoryMap[position.market.category]}</Badge>
-                          <Badge variant="outline">{position.market.status}</Badge>
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><Badge variant="secondary">{categoryMap[position.market.category]}</Badge><Badge variant="outline">{position.market.status}</Badge></div>
                         <h3 className="font-semibold text-lg mb-1">{position.market.question}</h3>
                         <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                          {position.market.options.map((opt, index) => (
-                            <span key={index}>
-                              <b>{opt}:</b> {parseFloat(formatEther(BigInt(position.shares[index]))).toFixed(2)} shares
-                            </span>
-                          ))}
+                          {position.market.options.map((opt, index) => (<span key={index}><b>{opt}:</b> {parseFloat(formatEther(BigInt(position.shares[index]))).toFixed(2)} shares</span>))}
                         </div>
                       </div>
                       <div className="flex flex-row items-start justify-end gap-6 text-center">
@@ -158,23 +203,21 @@ const Portfolio = () => {
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary">{categoryMap[position.market.category]}</Badge>
-                          <Badge className="bg-success text-success-foreground">{position.market.status}</Badge>
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><Badge variant="secondary">{categoryMap[position.market.category]}</Badge><Badge className="bg-success text-success-foreground">{position.market.status}</Badge></div>
                         <h3 className="font-semibold text-lg mb-1">{position.market.question}</h3>
-                         <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                          {position.market.options.map((opt, index) => (
-                            <span key={index}>
-                              <b>{opt}:</b> {parseFloat(formatEther(BigInt(position.shares[index]))).toFixed(2)} shares
-                            </span>
-                          ))}
+                        <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                          {position.market.options.map((opt, index) => (<span key={index}><b>{opt}:</b> {parseFloat(formatEther(BigInt(position.shares[index]))).toFixed(2)} shares</span>))}
                         </div>
                       </div>
                       <div className="flex flex-row items-start justify-end gap-6 text-center">
                         <div><p className="text-sm text-muted-foreground mb-1">Value</p><p className="font-semibold text-base text-success">$100.00</p></div>
                         <div><p className="text-sm text-muted-foreground mb-1">P&L</p><p className="font-semibold text-base text-success">+$25.00</p></div>
-                        <div className="self-center"><Button className="bg-gradient-success hover:opacity-90"><Trophy className="mr-2 h-4 w-4" />Claim</Button></div>
+                        <div className="self-center">
+                          <Button className="bg-gradient-success hover:opacity-90" onClick={() => handleClaimSubmit(position.market.id)} disabled={isPending || isConfirming}>
+                            <Trophy className="mr-2 h-4 w-4" />
+                            {isPending || isConfirming ? 'Claiming...' : 'Claim'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -187,12 +230,12 @@ const Portfolio = () => {
         </TabsContent>
 
         <TabsContent value="history" className="mt-8">
-            <Card>
-                <CardHeader><CardTitle>Trade History</CardTitle></CardHeader>
-                <CardContent className="p-10 text-center text-muted-foreground">
-                    Trade history from the Subgraph is coming soon.
-                </CardContent>
-            </Card>
+          <Card>
+            <CardHeader><CardTitle>Trade History</CardTitle></CardHeader>
+            <CardContent className="p-10 text-center text-muted-foreground">
+              <p>Fetching trade history from the Subgraph is coming soon.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
